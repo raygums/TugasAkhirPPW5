@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tugas Akhir PPW 5-Kalkulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="calculator">
+            <div class="display">
+                <div class="memory-indicator" id="memoryIndicator"></div>
+                <div class="display-expression" id="expression"></div>
+                <div class="display-result" id="result">0</div>
+            </div>
+            <div class="buttons">
+                <button class="btn-memory" onclick="memoryAdd()">M+</button>
+                <button class="btn-memory" onclick="memorySubtract()">M-</button>
+                <button class="btn-memory" onclick="memoryRecall()">MR</button>
+                <button class="btn-memory" onclick="memoryClear()">MC</button>
+                
+                <button class="btn-clear" onclick="clearEntry()">CE</button>
+                <button class="btn-clear" onclick="clearAll()">C</button>
+                <button class="btn-operator" onclick="appendOperator('/')">÷</button>
+                <button class="btn-operator" onclick="appendOperator('*')">×</button>
+                
+                <button class="btn-number" onclick="appendNumber('7')">7</button>
+                <button class="btn-number" onclick="appendNumber('8')">8</button>
+                <button class="btn-number" onclick="appendNumber('9')">9</button>
+                <button class="btn-operator" onclick="appendOperator('-')">-</button>
+                
+                <button class="btn-number" onclick="appendNumber('4')">4</button>
+                <button class="btn-number" onclick="appendNumber('5')">5</button>
+                <button class="btn-number" onclick="appendNumber('6')">6</button>
+                <button class="btn-operator" onclick="appendOperator('+')">+</button>
+                
+                <button class="btn-number" onclick="appendNumber('1')">1</button>
+                <button class="btn-number" onclick="appendNumber('2')">2</button>
+                <button class="btn-number" onclick="appendNumber('3')">3</button>
+                <button class="btn-decimal" onclick="appendDecimal()">.</button>
+                
+                <button class="btn-number" onclick="appendNumber('0')" style="grid-column: span 2;">0</button>
+                <button class="btn-equals" onclick="calculate()">=</button>
+            </div>
+        </div>
+
+        <div class="history-panel">
+            <h2>Riwayat Perhitungan</h2>
+            <div id="history"></div>
+            <button class="clear-history" onclick="clearHistory()">Hapus Riwayat</button>
+        </div>
+    </div>
+
+    <script>
+        let currentInput = '0';
+        let previousInput = '';
+        let operator = '';
+        let shouldResetDisplay = false;
+        let memory = 0;
+        let history = [];
+        const MAX_HISTORY = 5;
+
+        const resultDisplay = document.getElementById('result');
+        const expressionDisplay = document.getElementById('expression');
+        const memoryIndicator = document.getElementById('memoryIndicator');
+        const historyContainer = document.getElementById('history');
+
+        function updateDisplay() {
+            resultDisplay.textContent = currentInput;
+            if (previousInput && operator) {
+                expressionDisplay.textContent = `${previousInput} ${operator}`;
+            } else {
+                expressionDisplay.textContent = '';
+            }
+        }
+
+        function updateMemoryIndicator() {
+            memoryIndicator.textContent = memory !== 0 ? `M: ${memory}` : '';
+        }
+
+        function appendNumber(num) {
+            if (shouldResetDisplay) {
+                currentInput = num;
+                shouldResetDisplay = false;
+            } else {
+                currentInput = currentInput === '0' ? num : currentInput + num;
+            }
+            updateDisplay();
+        }
+
+        function appendDecimal() {
+            if (shouldResetDisplay) {
+                currentInput = '0.';
+                shouldResetDisplay = false;
+            } else if (!currentInput.includes('.')) {
+                currentInput += '.';
+            }
+            updateDisplay();
+        }
+
+        function appendOperator(op) {
+            if (operator && !shouldResetDisplay) {
+                calculate();
+            }
+            previousInput = currentInput;
+            operator = op;
+            shouldResetDisplay = true;
+            updateDisplay();
+        }
+
+        function calculate() {
+            if (!operator || shouldResetDisplay) return;
+
+            const prev = parseFloat(previousInput);
+            const current = parseFloat(currentInput);
+            let result;
+
+            try {
+                switch (operator) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '*':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        if (current === 0) {
+                            throw new Error('Tidak bisa membagi dengan nol');
+                        }
+                        result = prev / current;
+                        break;
+                    default:
+                        return;
+                }
+
+                result = Math.round(result * 100000000) / 100000000;
+                addToHistory(`${previousInput} ${operator} ${currentInput}`, result);
+                currentInput = result.toString();
+                operator = '';
+                previousInput = '';
+                shouldResetDisplay = true;
+                
+                resultDisplay.classList.remove('error');
+                updateDisplay();
+            } catch (error) {
+                resultDisplay.classList.add('error');
+                currentInput = error.message;
+                updateDisplay();
+                setTimeout(() => {
+                    clearAll();
+                    resultDisplay.classList.remove('error');
+                }, 2000);
+            }
+        }
+
+        function clearEntry() {
+            currentInput = '0';
+            updateDisplay();
+        }
+
+        function clearAll() {
+            currentInput = '0';
+            previousInput = '';
+            operator = '';
+            shouldResetDisplay = false;
+            updateDisplay();
+        }
+
+        function memoryAdd() {
+            memory += parseFloat(currentInput);
+            updateMemoryIndicator();
+            shouldResetDisplay = true;
+        }
+
+        function memorySubtract() {
+            memory -= parseFloat(currentInput);
+            updateMemoryIndicator();
+            shouldResetDisplay = true;
+        }
+
+        function memoryRecall() {
+            currentInput = memory.toString();
+            updateDisplay();
+            shouldResetDisplay = true;
+        }
+
+        function memoryClear() {
+            memory = 0;
+            updateMemoryIndicator();
+        }
+
+        function addToHistory(expression, result) {
+            const historyItem = {
+                expression: expression,
+                result: result,
+                timestamp: new Date().toLocaleTimeString('id-ID')
+            };
+
+            history.unshift(historyItem);
+            if (history.length > MAX_HISTORY) {
+                history.pop();
+            }
+
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            historyContainer.innerHTML = '';
+            
+            if (history.length === 0) {
+                historyContainer.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 20px;">Belum ada riwayat</p>';
+                return;
+            }
+
+            history.forEach(item => {
+                const historyElement = document.createElement('div');
+                historyElement.className = 'history-item';
+                historyElement.innerHTML = `
+                    <div class="history-expression">${item.expression}</div>
+                    <div class="history-result">= ${item.result}</div>
+                    <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">${item.timestamp}</div>
+                `;
+                historyElement.onclick = () => {
+                    currentInput = item.result.toString();
+                    updateDisplay();
+                    shouldResetDisplay = true;
+                };
+                historyContainer.appendChild(historyElement);
+            });
+        }
+
+        function clearHistory() {
+            history = [];
+            updateHistoryDisplay();
+        }
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            
+            if (e.key >= '0' && e.key <= '9') {
+                appendNumber(e.key);
+            } else if (e.key === '.') {
+                appendDecimal();
+            } else if (e.key === '+') {
+                appendOperator('+');
+            } else if (e.key === '-') {
+                appendOperator('-');
+            } else if (e.key === '*') {
+                appendOperator('*');
+            } else if (e.key === '/') {
+                appendOperator('/');
+            } else if (e.key === 'Enter' || e.key === '=') {
+                calculate();
+            } else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
+                clearAll();
+            } else if (e.key === 'Backspace') {
+                clearEntry();
+            }
+        });
+
+        updateDisplay();
+        updateMemoryIndicator();
+        updateHistoryDisplay();
+    </script>
+</body>
+</html>
